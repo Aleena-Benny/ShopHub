@@ -61,8 +61,9 @@ This creates sample products and two test accounts:
 
 | Role  | Email           | Password  |
 |-------|-----------------|-----------|
-| Admin | admin@shop.com  | admin123  |
-| User  | demo@shop.com   | demo123   |
+| Admin | admin@example.com  | admin123  |
+| User  | john@example.com   | password123   |
+| User  | jane@example.com   | password123   |
 
 ### 4. Start the servers
 
