@@ -1,0 +1,14 @@
+{
+  "name": "ecommerce-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-stack e-commerce app with React, Node.js, and MongoDB",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "seed": "npm run seed --prefix server",
+    "build": "npm run build --prefix client",
+    "vercel:deploy": "vercel --prod"
+  }
+}
