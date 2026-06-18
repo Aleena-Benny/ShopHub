@@ -26,11 +26,12 @@ app.use(async (_req, _res, next) => {
     await connectDB();
     next();
   } catch (err) {
+    console.error('Database initialization error:', err.message);
     next(err);
   }
 });
 
-app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (_, res) => res.json({ status: 'ok', db: 'mock' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -43,3 +44,4 @@ app.use((err, _req, res, _next) => {
 });
 
 export default app;
+

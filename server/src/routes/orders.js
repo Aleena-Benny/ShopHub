@@ -1,7 +1,5 @@
 import express from 'express';
-import Order from '../models/Order.js';
-import Product from '../models/Product.js';
-import User from '../models/User.js';
+import { mockDB } from '../mockData.js';
 import { protect, admin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -9,7 +7,7 @@ const router = express.Router();
 router.post('/', protect, async (req, res) => {
   const { shippingAddress, paymentMethod } = req.body;
 
-  const user = await User.findById(req.user._id).populate('cart.product');
+  const user = await mockDB.users.findById(req.user._id);
   if (!user.cart.length) {
     return res.status(400).json({ message: 'Cart is empty' });
   }
@@ -18,7 +16,7 @@ router.post('/', protect, async (req, res) => {
   let totalPrice = 0;
 
   for (const item of user.cart) {
-    const product = item.product;
+    const product = await mockDB.products.findById(item.product);
     if (!product || product.stock < item.quantity) {
       return res
         .status(400)
@@ -35,7 +33,7 @@ router.post('/', protect, async (req, res) => {
     totalPrice += product.price * item.quantity;
   }
 
-  const order = await Order.create({
+  const order = await mockDB.orders.create({
     user: req.user._id,
     items,
     shippingAddress,
@@ -46,36 +44,56 @@ router.post('/', protect, async (req, res) => {
   });
 
   for (const item of items) {
-    await Product.findByIdAndUpdate(item.product, {
-      $inc: { stock: -item.quantity },
-    });
+    const product = await mockDB.products.findById(item.product);
+    if (product) {
+      product.stock -= item.quantity;
+      await mockDB.products.findByIdAndUpdate(item.product, product);
+    }
   }
 
   user.cart = [];
-  await user.save();
+  await mockDB.users.save(user);
 
   res.status(201).json(order);
 });
 
 router.get('/myorders', protect, async (req, res) => {
-  const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
+  const orders = await mockDB.orders.find({ user: req.user._id });
+  // Sort by createdAt descending
+  orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   res.json(orders);
 });
 
 router.get('/:id', protect, async (req, res) => {
-  const order = await Order.findById(req.params.id);
+  const order = await mockDB.orders.findById(req.params.id);
   if (!order) {
     return res.status(404).json({ message: 'Order not found' });
   }
-  if (order.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+  if (order.user !== req.user._id && !req.user.isAdmin) {
     return res.status(403).json({ message: 'Not authorized' });
   }
   res.json(order);
 });
 
 router.get('/', protect, admin, async (req, res) => {
-  const orders = await Order.find({}).populate('user', 'name email').sort({ createdAt: -1 });
-  res.json(orders);
+  const allOrders = await mockDB.orders.find({});
+  
+  // Populate user info
+  const ordersWithUsers = await Promise.all(
+    allOrders.map(async (order) => {
+      const orderUser = await mockDB.users.findById(order.user);
+      return {
+        ...order,
+        user: orderUser ? { name: orderUser.name, email: orderUser.email } : null,
+      };
+    })
+  );
+  
+  // Sort by createdAt descending
+  ordersWithUsers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+  res.json(ordersWithUsers);
 });
 
 export default router;
+

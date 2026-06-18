@@ -1,5 +1,4 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import { mockDB } from '../mockData.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -13,13 +12,22 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password');
+    // Verify simple token instead of JWT
+    const userId = mockDB.auth.verifyToken(token);
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authorized, token failed' });
+    }
+
+    // Get user from mock database
+    req.user = await mockDB.users.findById(userId);
+    
     if (!req.user) {
       return res.status(401).json({ message: 'User not found' });
     }
+    
     next();
-  } catch {
+  } catch (err) {
     return res.status(401).json({ message: 'Not authorized, token failed' });
   }
 };
@@ -31,3 +39,4 @@ export const admin = (req, res, next) => {
     res.status(403).json({ message: 'Admin access required' });
   }
 };
+

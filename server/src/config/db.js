@@ -1,37 +1,23 @@
-import mongoose from 'mongoose';
+// Mock database connection - uses hardcoded data instead of MongoDB
+import { mockDB } from '../mockData.js';
 
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
+let isConnected = false;
 
 export const connectDB = async () => {
-  if (cached.conn) return cached.conn;
-
-  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ecommerce';
-
-  if (!uri.startsWith('mongodb')) {
-    throw new Error(
-      'MONGODB_URI environment variable is not properly set. ' +
-      'Please configure your MongoDB Atlas connection string in Vercel environment variables. ' +
-      'Expected format: mongodb+srv://user:password@cluster.mongodb.net/database'
-    );
+  if (isConnected) {
+    console.log('✓ Using mock database (hardcoded data)');
+    return mockDB;
   }
 
-  if (!cached.promise) {
-    cached.promise = mongoose
-      .connect(uri, { bufferCommands: false })
-      .then((mongoose) => {
-        console.log('✓ MongoDB connected successfully');
-        return mongoose;
-      })
-      .catch((err) => {
-        console.error('✗ MongoDB connection failed:', err.message);
-        throw new Error(`Failed to connect to MongoDB: ${err.message}`);
-      });
+  try {
+    // Simulate connection delay
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    isConnected = true;
+    console.log('✓ Mock database initialized successfully (no MongoDB required)');
+    return mockDB;
+  } catch (err) {
+    console.error('✗ Failed to initialize mock database:', err.message);
+    throw new Error(`Failed to initialize mock database: ${err.message}`);
   }
-
-  cached.conn = await cached.promise;
-  return cached.conn;
 };
+
